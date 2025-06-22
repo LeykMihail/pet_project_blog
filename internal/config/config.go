@@ -16,7 +16,7 @@ func New() *Config {
 	if port == "" {
 		port = "8080"
 	}
-	// postgres://user:pass@localhost:5432/blog?sslmode=disable - пример connSt
+	// postgres://user:pass@localhost:5432/blog?sslmode=disable - пример connStr
 	connStr := os.Getenv("DB_CONN_STR")
 
 	return &Config{
