@@ -2,11 +2,11 @@ package services
 
 import (
 	"context"
-	"errors"
+	"time"
+	
 	"pet_project_blog/internal/models"
 	"pet_project_blog/internal/repository"
-	"time"
-	"database/sql"
+	"pet_project_blog/internal/apperrors"
 
 	"go.uber.org/zap"
 )
@@ -38,11 +38,11 @@ func (ps *postService) CreatePost(ctx context.Context, title, content string) (*
 	// Валидация входных данных
 	if title == "" {
 		ps.logger.Warn("Empty title when creating post")
-		return nil, ErrEmptyTitle
+		return nil, apperrors.ErrEmptyTitle
 	}
 	if content == "" {
 		ps.logger.Warn("Empty content when creating post")
-		return nil, ErrEmptyContent
+		return nil, apperrors.ErrEmptyContent
 	}
 
 	// Создание модели поста с временной меткой
@@ -56,7 +56,7 @@ func (ps *postService) CreatePost(ctx context.Context, title, content string) (*
 	err := ps.postRepo.CreatePost(ctx, &post)
 	if err != nil {
 		ps.logger.Error("Failed to save post to database", zap.Error(err))
-		return nil, ErrDataBase
+		return nil, apperrors.ErrDataBase
 	}
 
 	ps.logger.Info("Post created successfully", zap.Int("id", post.ID))
@@ -70,18 +70,18 @@ func (ps *postService) GetPost(ctx context.Context, id int) (*models.Post, error
 	// Валидация ID
 	if id <= 0 {
 		ps.logger.Warn("Invalid ID", zap.Int("id", id))
-		return nil, ErrInvalidID
+		return nil, apperrors.ErrInvalidID
 	}
 
 	// Получение поста из базы данных через репозиторий
 	post, err := ps.postRepo.GetPost(ctx, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if err == apperrors.ErrSqlNoFoundRows {
 			ps.logger.Warn("Post not found in database", zap.Int("id", id))
-			return nil, ErrNotFoundPost
+			return nil, apperrors.ErrNotFoundPost
 		}
 		ps.logger.Error("Failed to fetch post from database", zap.Error(err))
-        return nil, ErrDataBase
+        return nil, apperrors.ErrDataBase
 	}
 
 	ps.logger.Info("Fetching post successfully", zap.Int("id", post.ID))
@@ -96,27 +96,9 @@ func (ps *postService) GetAllPosts(ctx context.Context) ([]*models.Post, error) 
 	posts, err := ps.postRepo.GetAllPosts(ctx)
 	if err != nil {
 		ps.logger.Error("Failed to fetch all posts from database", zap.Error(err))
-		return nil, ErrDataBase
+		return nil, apperrors.ErrDataBase
 	}
 
 	ps.logger.Info("Fetched all posts successfully", zap.Int("count", len(posts)))
 	return posts, nil
-}
-
-// Ошибки сервиса
-var (
-	ErrEmptyTitle   = &ServiceError{Message: "title cannot be empty"}
-	ErrEmptyContent = &ServiceError{Message: "content cannot be empty"}
-	ErrInvalidID    = &ServiceError{Message: "invalid post ID"}
-	ErrNotFoundPost = &ServiceError{Message: "post not found"}
-	ErrDataBase     = &ServiceError{Message: "database error"}
-)
-
-// ServiceError представляет ошибку сервиса
-type ServiceError struct {
-	Message string
-}
-
-func (e *ServiceError) Error() string {
-	return e.Message
 }

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"pet_project_blog/internal/services"
+	"pet_project_blog/internal/apperrors"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -21,7 +22,8 @@ type PostHandler struct {
 // NewPostHandler создает новый экземпляр PostHandler
 func NewPostHandler(postService services.PostService, logger *zap.Logger) *PostHandler {
 	return &PostHandler{
-		postService: postService, logger: logger,
+		postService: postService,
+		logger:      logger,
 	}
 }
 
@@ -44,10 +46,10 @@ func (h *PostHandler) getHome(c *gin.Context) {
 		"• Use ?fields=id,title to filter response fields\n" +
 		"• Example: /posts?fields=id,title,created_at\n\n" +
 		"Happy blogging! ✨"
-	
+
 	c.JSON(http.StatusOK, gin.H{
-        "message": message,
-    })
+		"message": message,
+	})
 
 	// c.Data(http.StatusOK, "text/plain; charset=utf-8", []byte(message))
 }
@@ -95,11 +97,11 @@ func (h *PostHandler) getPost(c *gin.Context) {
 	// Получаем пост из сервиса по указанному ID
 	post, err := h.postService.GetPost(ctx, id)
 	if err != nil {
-		if errors.Is(err, services.ErrNotFoundPost) {
-            c.JSON(404, gin.H{"error": "Post not found"})
-            return
+		if errors.Is(err, apperrors.ErrNotFoundPost) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Post not found"})
+			return
 		}
-		if errors.Is(err, services.ErrInvalidID){
+		if errors.Is(err, apperrors.ErrInvalidID) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
 			return
 		}
@@ -115,42 +117,42 @@ func (h *PostHandler) getPost(c *gin.Context) {
 // getAllPosts обрабатывает GET /posts (получение всех постов).
 func (h *PostHandler) getAllPosts(c *gin.Context) {
 	ctx := c.Request.Context()
-    
-    // Получаем параметры из query string
-    fields := c.Query("fields")  // например: "id,title"
-    
-    posts, err := h.postService.GetAllPosts(ctx)
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get posts"})
-        return
-    }
 
-    // Фильтруем поля если нужно
-    if fields != "" {
-        fieldList := strings.Split(fields, ",")
-        postsWithFields := make([]gin.H, len(posts))
-        for i, post := range posts {
-            postsWithFields[i] = gin.H{}
-            for _, f := range fieldList {
-                switch f {
-                case "id":
-                    postsWithFields[i]["id"] = post.ID
-                case "title":
-                    postsWithFields[i]["title"] = post.Title
-                case "content":
-                    postsWithFields[i]["content"] = post.Content
-                case "created_at":
-                    postsWithFields[i]["created_at"] = post.CreatedAt
+	// Получаем параметры из query string
+	fields := c.Query("fields") // например: "id,title"
+
+	posts, err := h.postService.GetAllPosts(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get posts"})
+		return
+	}
+
+	// Фильтруем поля если нужно
+	if fields != "" {
+		fieldList := strings.Split(fields, ",")
+		postsWithFields := make([]gin.H, len(posts))
+		for i, post := range posts {
+			postsWithFields[i] = gin.H{}
+			for _, f := range fieldList {
+				switch f {
+				case "id":
+					postsWithFields[i]["id"] = post.ID
+				case "title":
+					postsWithFields[i]["title"] = post.Title
+				case "content":
+					postsWithFields[i]["content"] = post.Content
+				case "created_at":
+					postsWithFields[i]["created_at"] = post.CreatedAt
 				default:
 					h.logger.Warn("Invalid filter to response fields", zap.String("fields", fields))
 					c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid filter to response fields"})
 					return
-                }
-            }
-        }
-        c.JSON(http.StatusOK, gin.H{"posts": postsWithFields})
-        return
-    } else {
-        c.JSON(http.StatusOK, gin.H{"posts": posts})
-    }
+				}
+			}
+		}
+		c.JSON(http.StatusOK, gin.H{"posts": postsWithFields})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"posts": posts})
 }

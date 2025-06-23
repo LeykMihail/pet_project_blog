@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
 	"pet_project_blog/internal/models"
+	"pet_project_blog/internal/apperrors"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
@@ -40,7 +42,7 @@ func (pr *postRepository) CreatePost(ctx context.Context, post *models.Post) err
 	).Scan(&id)
 
 	if err != nil {
-		return fmt.Errorf("database error: %w", err)
+		return fmt.Errorf("%w: %v", apperrors.ErrSqlDataBase, err)
 	}
 
 	// Устанавливаем ID созданного поста
@@ -56,9 +58,9 @@ func (pr *postRepository) GetPost(ctx context.Context, id int) (*models.Post, er
 		`SELECT id, title, content, created_at FROM posts WHERE id = $1`, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("post not found: %w", err)
+			return nil, apperrors.ErrSqlNoFoundRows
 		}
-		return nil, fmt.Errorf("database error: %w", err)
+		return nil, fmt.Errorf("%w: %v", apperrors.ErrSqlDataBase, err)
 	}
 	return &post, nil
 }
@@ -70,7 +72,7 @@ func (pr *postRepository) GetAllPosts(ctx context.Context) ([]*models.Post, erro
 	err := pr.db.SelectContext(ctx, &posts,
 		`SELECT id, title, content, created_at FROM posts ORDER BY created_at DESC`)
 	if err != nil {
-		return nil, fmt.Errorf("database error: %w", err)
+		return nil, fmt.Errorf("%w: %v", apperrors.ErrSqlDataBase, err)
 	}
 
 	return posts, nil
