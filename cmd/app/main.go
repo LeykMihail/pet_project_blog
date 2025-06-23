@@ -3,42 +3,25 @@ package main
 import (
 	"pet_project_blog/internal/config"
 	"pet_project_blog/internal/handlers"
+	"pet_project_blog/internal/logger"
 	"pet_project_blog/internal/repository"
 	"pet_project_blog/internal/services"
 
 	"github.com/gin-gonic/gin"
-	
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
+	"go.uber.org/zap"
 )
 
 func main() {
 	// Создаем logger для разработки
-	loggerConfig := zap.NewDevelopmentConfig()
-
-    // Убираем stacktrace из WARN
-    loggerConfig.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
-
-	// Настройка отображения времени
-    loggerConfig.EncoderConfig.TimeKey = "timestamp"
-    loggerConfig.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-
-    // Stacktrace только с Error и выше
-    loggerConfig.DisableStacktrace = true // отключает по умолчанию
-    logger, err := loggerConfig.Build(
-        zap.AddStacktrace(zap.ErrorLevel), // явно добавляем только с error
-    )
-
+	logger, err := logger.New()
 	if err != nil {
 		panic("failed to initialize logger " + err.Error())
 	}
-
 	logger.Info("Logger initialized successfully")
 	defer logger.Sync()
 
