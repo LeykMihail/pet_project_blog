@@ -2,6 +2,8 @@ package config
 
 import (
 	"os"
+
+	"pet_project_blog/internal/apperrors"
 )
 
 // Config содержит базовые настройки
@@ -27,5 +29,9 @@ func New() *Config {
 
 // Load загружает конфигурацию
 func Load() (*Config, error) {
-	return New(), nil
+	cfg := New()
+	if cfg.ConnectBdStr == "" {
+        return nil, apperrors.ErrCfgEmptyDB_CONN_STR
+    }
+    return cfg, nil
 }

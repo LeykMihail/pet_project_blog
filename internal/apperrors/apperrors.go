@@ -3,7 +3,6 @@ package apperrors
 
 // Ошибки сервиса
 var (
-
 	ErrEmptyTitle   = &ServiceError{Message: "title cannot be empty"}
 	ErrEmptyContent = &ServiceError{Message: "content cannot be empty"}
 	ErrInvalidID    = &ServiceError{Message: "invalid post ID"}
@@ -12,6 +11,8 @@ var (
 
 	ErrSqlNoFoundRows 	= &RepositoryError{Message: "rows not found in database"}
 	ErrSqlDataBase 		= &RepositoryError{Message: "database error"}
+
+	ErrCfgEmptyDB_CONN_STR = &CustomError{Message: "DB_CONN_STR is required"}
 )
 
 // ServiceError представляет ошибку сервиса
@@ -29,5 +30,14 @@ type RepositoryError struct {
 }
 
 func (e *RepositoryError) Error() string {
+	return e.Message
+}
+
+// CustomError представляет ошибки для остальных случаев
+type CustomError struct {
+	Message string
+}
+
+func (e *CustomError) Error() string {
 	return e.Message
 }
