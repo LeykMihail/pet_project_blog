@@ -31,7 +31,7 @@ func New() *Config {
 func Load() (*Config, error) {
 	cfg := New()
 	if cfg.ConnectBdStr == "" {
-        return nil, apperrors.ErrCfgEmptyDB_CONN_STR
+        return nil, apperrors.ErrConfigEmptyDB_CONN_STR
     }
     return cfg, nil
 }

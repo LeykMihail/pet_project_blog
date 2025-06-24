@@ -33,6 +33,8 @@ func RegisterRoutes(r *gin.Engine, postHandler *PostHandler) {
 	r.GET("/posts", postHandler.getAllPosts)
 	r.POST("/posts", postHandler.createPost)
 	r.GET("/posts/:id", postHandler.getPost)
+	r.POST("/posts/:id/comments", postHandler.createComment)
+    r.GET("/posts/:id/comments", postHandler.getComments)
 }
 
 // getHome обрабатывает GET / (главная страница).
@@ -155,4 +157,77 @@ func (h *PostHandler) getAllPosts(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"posts": posts})
+}
+
+// createComments обрабатывает POST /posts/:id/comments (добавление нового комментария для поста).
+func (h *PostHandler) createComment(c *gin.Context) {
+	var input struct {
+		Content string `json:"content" binding:"required"`
+	}
+	ctx := c.Request.Context()
+	idStr := c.Param("id")
+
+	// Преобразование строки в int
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		h.logger.Warn("Invalid ID format", zap.String("id", c.Param("id")))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+		return
+	}
+
+	// Получаем данные
+	if err := c.ShouldBindJSON(&input); err != nil {
+		h.logger.Warn("Invalid content format", zap.String("id", c.Param("id")))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
+	// Создаем комментарий по полученным данным
+	comment, err := h.postService.CreateComment(ctx, id, input.Content)
+	if err != nil {
+		if errors.Is(err, apperrors.ErrNotFoundPost) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Post not found"})
+			return
+		}
+		if errors.Is(err, apperrors.ErrInvalidID) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"comment": comment,
+	})
+}
+
+// getComments обрабатывает GET /posts/:id/comments (получение всех комментариев поста).
+func (h *PostHandler) getComments(c *gin.Context) {
+	ctx := c.Request.Context()
+	idStr := c.Param("id")
+
+	// Преобразование строки в int
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		h.logger.Warn("Invalid ID format", zap.String("id", c.Param("id")))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+		return
+	}
+
+	comments, err := h.postService.GetCommentsByPostID(ctx, id)
+	if err != nil {
+		if errors.Is(err, apperrors.ErrNotFoundPost) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Post not found"})
+			return
+		}
+		if errors.Is(err, apperrors.ErrInvalidID) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get comments"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"comments": comments})
 }

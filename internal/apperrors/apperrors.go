@@ -9,10 +9,11 @@ var (
 	ErrNotFoundPost = &ServiceError{Message: "post not found"}
 	ErrDataBase     = &ServiceError{Message: "database error"}
 
-	ErrSqlNoFoundRows 	= &RepositoryError{Message: "rows not found in database"}
-	ErrSqlDataBase 		= &RepositoryError{Message: "database error"}
+	ErrSqlNoFoundRows 		 = &RepositoryError{Message: "rows not found"}
+	ErrSqlForignKeyViolation = &RepositoryError{Message: "foreign key violation"}
+	ErrSqlDataBase 		 	 = &RepositoryError{Message: "database error"}
 
-	ErrCfgEmptyDB_CONN_STR = &CustomError{Message: "DB_CONN_STR is required"}
+	ErrConfigEmptyDB_CONN_STR = &CustomError{Message: "DB_CONN_STR is required"}
 )
 
 // ServiceError представляет ошибку сервиса
