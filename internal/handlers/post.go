@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -74,6 +73,18 @@ func (h *PostHandler) createPost(c *gin.Context) {
 	// Создаем пост по полученным данным
 	post, err := h.postService.CreatePost(ctx, input.Title, input.Content)
 	if err != nil {
+		if err == apperrors.ErrEmptyTitle {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "title must not be empty"})
+			return
+		}
+		if err == apperrors.ErrLengthTitle {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "maximum length title exceeded"})
+			return
+		}
+		if err == apperrors.ErrEmptyContent {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "content must not be empty"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create post"})
 		return
 	}
@@ -99,11 +110,11 @@ func (h *PostHandler) getPost(c *gin.Context) {
 	// Получаем пост из сервиса по указанному ID
 	post, err := h.postService.GetPost(ctx, id)
 	if err != nil {
-		if errors.Is(err, apperrors.ErrNotFoundPost) {
+		if err == apperrors.ErrNotFoundPost {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Post not found"})
 			return
 		}
-		if errors.Is(err, apperrors.ErrInvalidID) {
+		if err == apperrors.ErrInvalidID {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
 			return
 		}
@@ -185,12 +196,16 @@ func (h *PostHandler) createComment(c *gin.Context) {
 	// Создаем комментарий по полученным данным
 	comment, err := h.postService.CreateComment(ctx, id, input.Content)
 	if err != nil {
-		if errors.Is(err, apperrors.ErrNotFoundPost) {
+		if err == apperrors.ErrNotFoundPost {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Post not found"})
 			return
 		}
-		if errors.Is(err, apperrors.ErrInvalidID) {
+		if err == apperrors.ErrInvalidID {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+			return
+		}
+		if err == apperrors.ErrEmptyContent {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Comment content cannot be empty"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
@@ -217,11 +232,11 @@ func (h *PostHandler) getComments(c *gin.Context) {
 
 	comments, err := h.postService.GetCommentsByPostID(ctx, id)
 	if err != nil {
-		if errors.Is(err, apperrors.ErrNotFoundPost) {
+		if err == apperrors.ErrNotFoundPost {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Post not found"})
 			return
 		}
-		if errors.Is(err, apperrors.ErrInvalidID) {
+		if err == apperrors.ErrInvalidID {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
 			return
 		}

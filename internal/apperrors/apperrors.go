@@ -4,6 +4,7 @@ package apperrors
 // Ошибки сервиса
 var (
 	ErrEmptyTitle   = &ServiceError{Message: "title cannot be empty"}
+	ErrLengthTitle	= &ServiceError{Message: "maximum length title exceeded"}
 	ErrEmptyContent = &ServiceError{Message: "content cannot be empty"}
 	ErrInvalidID    = &ServiceError{Message: "invalid post ID"}
 	ErrNotFoundPost = &ServiceError{Message: "post not found"}

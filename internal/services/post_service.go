@@ -39,13 +39,12 @@ func (ps *postService) CreatePost(ctx context.Context, title, content string) (*
 	ps.logger.Info("Creating new post", zap.String("title", title))
 
 	// Валидация входных данных
-	if title == "" {
-		ps.logger.Warn("Empty title when creating post")
-		return nil, apperrors.ErrEmptyTitle
+	if err := validatePostTitle(ps.logger, title); err != nil {
+
+		return nil, err
 	}
-	if content == "" {
-		ps.logger.Warn("Empty content when creating post")
-		return nil, apperrors.ErrEmptyContent
+	if err := validatePostContent(ps.logger, content); err != nil {
+		return nil, err
 	}
 
 	// Создание модели поста с временной меткой
@@ -71,9 +70,8 @@ func (ps *postService) GetPost(ctx context.Context, id int) (*models.Post, error
 	ps.logger.Info("Fetching post by ID", zap.Int("id", id))
 
 	// Валидация ID
-	if id <= 0 {
-		ps.logger.Warn("Invalid ID", zap.Int("id", id))
-		return nil, apperrors.ErrInvalidID
+	if err := validateID(ps.logger, id); err != nil {
+		return nil, err
 	}
 
 	// Получение поста из базы данных через репозиторий
@@ -93,7 +91,6 @@ func (ps *postService) GetPost(ctx context.Context, id int) (*models.Post, error
 		ps.logger.Error("Failed to fetch all comments from database", zap.Error(err), zap.Int("postID", post.ID))
 		return nil, apperrors.ErrDataBase
 	}
-
 	post.Comments = comments
 
 	ps.logger.Info("Fetching post successfully", zap.Int("id", post.ID))
@@ -118,15 +115,12 @@ func (ps *postService) GetAllPosts(ctx context.Context) ([]*models.Post, error) 
 func (ps *postService) CreateComment(ctx context.Context, postID int, content string) (*models.Comment, error) {
 	ps.logger.Info("Creating new comment", zap.Int("post ID", postID))
 
-	// Валидация входных данных
-	if postID < 0 {
-		ps.logger.Warn("Invalid ID", zap.Int("id", postID))
-		return nil, apperrors.ErrInvalidID
+	// Валидация данных
+	if err := validateID(ps.logger, postID); err != nil {
+		return nil, err
 	}
-
-	if content == "" {
-		ps.logger.Warn("Empty content when creating comment")
-		return nil, apperrors.ErrEmptyContent
+	if err := validateCommentContent(ps.logger, content); err != nil {
+		return nil, err
 	}
 
 	// Создание модели поста с временной меткой
@@ -154,10 +148,9 @@ func (ps *postService) CreateComment(ctx context.Context, postID int, content st
 func (ps *postService) GetCommentsByPostID(ctx context.Context, postID int) ([]*models.Comment, error) {
 	ps.logger.Info("Fetching all comments", zap.Int("postID", postID))
 
-	// Валидация входных данных
-	if postID < 0 {
-		ps.logger.Warn("Invalid ID", zap.Int("id", postID))
-		return nil, apperrors.ErrInvalidID
+	// Валидация ID
+	if err := validateID(ps.logger, postID); err != nil {
+		return nil, err
 	}
 	
 	// Проверка существования поста
