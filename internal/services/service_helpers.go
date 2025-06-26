@@ -45,3 +45,15 @@ func validateCommentContent(logger *zap.Logger, content string) error {
 	}
 	return nil
 }
+
+func validUserPassword(logger *zap.Logger, password string) error {
+	if len(password) == 0 {
+		logger.Warn("Empty password")
+		return apperrors.ErrEmptyPassword
+	}
+	if len(password) < 8 || len(password) > 64 {
+		logger.Warn("Password length is invalid during user registration", zap.Int("length", len(password)))
+		return apperrors.ErrLenghtPassword
+	}
+	return nil
+}

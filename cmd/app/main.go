@@ -70,9 +70,12 @@ func main() {
 	logger.Info("Migrations applied successfully")
 
 	// Инициализация слоев приложения
+	userRepo := repository.NewUserRepository(blogDB)
 	postRepo := repository.NewPostRepository(blogDB)
+	userService := services.NewUserService(userRepo, logger)
 	postService := services.NewPostService(postRepo, logger)
 	postHandler := handlers.NewPostHandler(postService, logger)
+	userHandler := handlers.NewUserHandler(userService, logger)
 
 	// Инициализация Gin
 	r := gin.Default()
@@ -85,7 +88,8 @@ func main() {
 	}
 
 	// Регистрация маршрутов
-	handlers.RegisterRoutes(r, postHandler)
+	handlers.RegisterRoutesPost(r, postHandler)
+	handlers.RegisterRoutesUser(r, userHandler)
 
 	// Запуск сервера
 	if err := r.Run(":" + cfg.Port); err != nil {

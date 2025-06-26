@@ -30,13 +30,14 @@ type postService struct {
 // NewPostService создает новый экземпляр PostService
 func NewPostService(postRepo repository.PostRepository, logger *zap.Logger) PostService {
 	return &postService{
-		postRepo: postRepo, logger: logger,
+		postRepo: postRepo, 
+		logger: logger,
 	}
 }
 
 // CreatePost создает новый пост с валидацией и бизнес-логикой
 func (ps *postService) CreatePost(ctx context.Context, title, content string) (*models.Post, error) {
-	ps.logger.Info("Creating new post", zap.String("title", title))
+	ps.logger.Info("Start creating new post", zap.String("title", title))
 
 	// Валидация входных данных
 	if err := validatePostTitle(ps.logger, title); err != nil {
@@ -67,7 +68,7 @@ func (ps *postService) CreatePost(ctx context.Context, title, content string) (*
 
 // GetPost получает пост по ID с обработкой ошибок
 func (ps *postService) GetPost(ctx context.Context, id int) (*models.Post, error) {
-	ps.logger.Info("Fetching post by ID", zap.Int("id", id))
+	ps.logger.Info("Start fetching post by ID", zap.Int("id", id))
 
 	// Валидация ID
 	if err := validateID(ps.logger, id); err != nil {
@@ -99,7 +100,7 @@ func (ps *postService) GetPost(ctx context.Context, id int) (*models.Post, error
 
 // GetAllPosts получает все посты с обработкой ошибок
 func (ps *postService) GetAllPosts(ctx context.Context) ([]*models.Post, error) {
-	ps.logger.Info("Fetching all posts")
+	ps.logger.Info("Start fetching all posts")
 
 	// Получение всех постов из базы данных через репозиторий
 	posts, err := ps.postRepo.GetAllPosts(ctx)
@@ -113,7 +114,7 @@ func (ps *postService) GetAllPosts(ctx context.Context) ([]*models.Post, error) 
 }
 
 func (ps *postService) CreateComment(ctx context.Context, postID int, content string) (*models.Comment, error) {
-	ps.logger.Info("Creating new comment", zap.Int("post ID", postID))
+	ps.logger.Info("Start creating new comment", zap.Int("post ID", postID))
 
 	// Валидация данных
 	if err := validateID(ps.logger, postID); err != nil {
@@ -146,7 +147,7 @@ func (ps *postService) CreateComment(ctx context.Context, postID int, content st
 }
 
 func (ps *postService) GetCommentsByPostID(ctx context.Context, postID int) ([]*models.Comment, error) {
-	ps.logger.Info("Fetching all comments", zap.Int("postID", postID))
+	ps.logger.Info("Start fetching all comments", zap.Int("postID", postID))
 
 	// Валидация ID
 	if err := validateID(ps.logger, postID); err != nil {

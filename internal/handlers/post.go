@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"pet_project_blog/internal/services"
 	"pet_project_blog/internal/apperrors"
+	"pet_project_blog/internal/services"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -27,13 +27,13 @@ func NewPostHandler(postService services.PostService, logger *zap.Logger) *PostH
 }
 
 // RegisterRoutes регистрирует маршруты для постов.
-func RegisterRoutes(r *gin.Engine, postHandler *PostHandler) {
+func RegisterRoutesPost(r *gin.Engine, postHandler *PostHandler) {
 	r.GET("/", postHandler.getHome)
 	r.GET("/posts", postHandler.getAllPosts)
-	r.POST("/posts", postHandler.createPost)
+	r.POST("/posts", AuthMiddleware(postHandler.logger), postHandler.createPost)
 	r.GET("/posts/:id", postHandler.getPost)
-	r.POST("/posts/:id/comments", postHandler.createComment)
-    r.GET("/posts/:id/comments", postHandler.getComments)
+	r.POST("/posts/:id/comments", AuthMiddleware(postHandler.logger), postHandler.createComment)
+	r.GET("/posts/:id/comments", postHandler.getComments)
 }
 
 // getHome обрабатывает GET / (главная страница).
