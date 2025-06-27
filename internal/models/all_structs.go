@@ -9,6 +9,7 @@ type Post struct {
     Title     string    `db:"title" `
     Content   string    `db:"content"`
     CreatedAt time.Time `db:"created_at"`
+    UserID    int       `db:"user_id"`
     Comments  []*Comment `db:"-"`
 }
 
@@ -17,6 +18,7 @@ type Comment struct {
     PostID    int       `db:"post_id"`
     Content   string    `db:"content"`
     CreatedAt time.Time `db:"created_at"`
+    UserID    int       `db:"user_id"`
 }
 
 type User struct {
