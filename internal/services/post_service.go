@@ -13,11 +13,11 @@ import (
 
 // PostService определяет интерфейс для бизнес-логики работы с постами
 type PostService interface {
-	CreatePost(ctx context.Context, title, content string) (*models.Post, error)
+	CreatePost(ctx context.Context, title, content string, userID int) (*models.Post, error)
 	GetPost(ctx context.Context, id int) (*models.Post, error)
 	GetAllPosts(ctx context.Context) ([]*models.Post, error)
 
-	CreateComment(ctx context.Context, postID int, content string) (*models.Comment, error)
+	CreateComment(ctx context.Context, postID int, content string, userID int) (*models.Comment, error)
 	GetCommentsByPostID(ctx context.Context, id int) ([]*models.Comment, error)
 }
 
@@ -36,7 +36,7 @@ func NewPostService(postRepo repository.PostRepository, logger *zap.Logger) Post
 }
 
 // CreatePost создает новый пост с валидацией и бизнес-логикой
-func (ps *postService) CreatePost(ctx context.Context, title, content string) (*models.Post, error) {
+func (ps *postService) CreatePost(ctx context.Context, title, content string, userID int) (*models.Post, error) {
 	ps.logger.Info("Start creating new post", zap.String("title", title))
 
 	// Валидация входных данных
@@ -53,6 +53,7 @@ func (ps *postService) CreatePost(ctx context.Context, title, content string) (*
 		Title:     title,
 		Content:   content,
 		CreatedAt: time.Now(),
+		UserID: userID,
 	}
 
 	// Сохранение в базу данных через репозиторий
@@ -113,7 +114,7 @@ func (ps *postService) GetAllPosts(ctx context.Context) ([]*models.Post, error) 
 	return posts, nil
 }
 
-func (ps *postService) CreateComment(ctx context.Context, postID int, content string) (*models.Comment, error) {
+func (ps *postService) CreateComment(ctx context.Context, postID int, content string, userID int) (*models.Comment, error) {
 	ps.logger.Info("Start creating new comment", zap.Int("post ID", postID))
 
 	// Валидация данных
@@ -129,10 +130,22 @@ func (ps *postService) CreateComment(ctx context.Context, postID int, content st
 		PostID:    postID,
 		Content:   content,
 		CreatedAt: time.Now(),
+		UserID:    userID,
+	}
+	
+	// Проверка существования поста
+	_, err := ps.postRepo.GetPost(ctx, postID)
+	if err != nil {
+		if err == apperrors.ErrSqlNoFoundRows {
+			ps.logger.Warn("Post not found in database", zap.Int("id", postID))
+			return nil, apperrors.ErrNotFoundPost
+		}
+		ps.logger.Error("Failed to fetch post from database", zap.Error(err))
+        return nil, apperrors.ErrDataBase
 	}
 
 	// Сохранение в базу данных через репозиторий
-	err := ps.postRepo.CreatComment(ctx, &comment)
+	err = ps.postRepo.CreatComment(ctx, &comment)
 	if err != nil {
 		if err == apperrors.ErrSqlForignKeyViolation {
 			ps.logger.Warn("Post not found in database", zap.Error(err))

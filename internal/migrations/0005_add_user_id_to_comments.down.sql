@@ -1,2 +1,0 @@
-ALTER TABLE comments
-DROP COLUMN user_id;

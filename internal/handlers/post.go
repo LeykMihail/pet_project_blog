@@ -38,15 +38,18 @@ func RegisterRoutesPost(r *gin.Engine, postHandler *PostHandler) {
 
 // getHome обрабатывает GET / (главная страница).
 func (h *PostHandler) getHome(c *gin.Context) {
-	message := "Welcome to the Blog API! 🚀\n\n" +
-		"Available endpoints:\n" +
-		"• GET /posts - View all posts\n" +
-		"• POST /posts - Create a new post\n" +
-		"• GET /posts/:id - Get a specific post\n\n" +
-		"Query Parameters:\n" +
-		"• Use ?fields=id,title to filter response fields\n" +
-		"• Example: /posts?fields=id,title,created_at\n\n" +
-		"Happy blogging! ✨"
+	message := "Добро пожаловать в Blog API! 🚀\n\n" +
+		"Доступные эндпоинты:\n" +
+		"• GET /posts - Просмотр всех постов\n" +
+		"• POST /posts - Создать новый пост\n" +
+		"• GET /posts/:id - Получить конкретный пост\n" +
+		"• POST /posts/:id/comments - Добавить комментарий к посту\n" +
+		"• GET /posts/:id/comments - Получить все комментарии к посту\n\n" +
+		"Параметры запроса:\n" +
+		"• Используйте ?fields=id,title для фильтрации полей ответа\n" +
+		"• Пример: /posts?fields=id,title,created_at\n\n" +
+		"Для создания и комментирования постов требуется авторизация через /register, а потом /login .\n\n" +
+		"Приятного блогинга! ✨"
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": message,
@@ -57,12 +60,18 @@ func (h *PostHandler) getHome(c *gin.Context) {
 
 // createPost обрабатывает POST /posts (создание поста).
 func (h *PostHandler) createPost(c *gin.Context) {
+	ctx := c.Request.Context()
+	userID, exists := c.Get("user_id")
+    if !exists {
+        h.logger.Warn("User ID not found in context", zap.String("handler", "createPost"))
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+
 	var input struct {
 		Title   string `json:"title" binding:"required"`
 		Content string `json:"content" binding:"required"`
 	}
-
-	ctx := c.Request.Context()
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		h.logger.Warn("Invalid title or content format", zap.String("id", c.Param("id")))
@@ -71,7 +80,7 @@ func (h *PostHandler) createPost(c *gin.Context) {
 	}
 
 	// Создаем пост по полученным данным
-	post, err := h.postService.CreatePost(ctx, input.Title, input.Content)
+	post, err := h.postService.CreatePost(ctx, input.Title, input.Content, userID.(int))
 	if err != nil {
 		if err == apperrors.ErrEmptyTitle {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "title must not be empty"})
@@ -156,6 +165,8 @@ func (h *PostHandler) getAllPosts(c *gin.Context) {
 					postsWithFields[i]["content"] = post.Content
 				case "created_at":
 					postsWithFields[i]["created_at"] = post.CreatedAt
+				case "user_id":
+					postsWithFields[i]["user_id"] = post.UserID
 				default:
 					h.logger.Warn("Invalid filter to response fields", zap.String("fields", fields))
 					c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid filter to response fields"})
@@ -172,10 +183,17 @@ func (h *PostHandler) getAllPosts(c *gin.Context) {
 
 // createComments обрабатывает POST /posts/:id/comments (добавление нового комментария для поста).
 func (h *PostHandler) createComment(c *gin.Context) {
+	ctx := c.Request.Context()
+	userID, exists := c.Get("user_id")
+    if !exists {
+        h.logger.Warn("User ID not found in context", zap.String("handler", "createPost"))
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+	
 	var input struct {
 		Content string `json:"content" binding:"required"`
 	}
-	ctx := c.Request.Context()
 	idStr := c.Param("id")
 
 	// Преобразование строки в int
@@ -194,7 +212,7 @@ func (h *PostHandler) createComment(c *gin.Context) {
 	}
 
 	// Создаем комментарий по полученным данным
-	comment, err := h.postService.CreateComment(ctx, id, input.Content)
+	comment, err := h.postService.CreateComment(ctx, id, input.Content, userID.(int))
 	if err != nil {
 		if err == apperrors.ErrNotFoundPost {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Post not found"})
