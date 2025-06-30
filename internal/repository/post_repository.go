@@ -18,7 +18,7 @@ type PostRepository interface {
 	GetPost(ctx context.Context, id int) (*models.Post, error)
 	GetAllPosts(ctx context.Context) ([]*models.Post, error)
 
-	CreatComment(ctx context.Context, comment *models.Comment) error
+	CreateComment(ctx context.Context, comment *models.Comment) error
 	GetCommentsByPostID(ctx context.Context, id int) ([]*models.Comment, error)
 }
 
@@ -83,7 +83,7 @@ func (pr *postRepository) GetAllPosts(ctx context.Context) ([]*models.Post, erro
 	return posts, nil
 }
 
-func (pr *postRepository) CreatComment(ctx context.Context, comment *models.Comment) error {
+func (pr *postRepository) CreateComment(ctx context.Context, comment *models.Comment) error {
 	// Выполнение SQL запроса для вставки нового поста с возвратом ID
 	var commentID int
 	err := pr.db.QueryRowContext(ctx,

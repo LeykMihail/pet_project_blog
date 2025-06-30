@@ -16,6 +16,7 @@ var (
 
 	ErrSqlNoFoundRows 		 = &RepositoryError{Message: "rows not found"}
 	ErrSqlForignKeyViolation = &RepositoryError{Message: "foreign key violation"}
+	ErrSqlUniqueViolation    = &RepositoryError{Message: "unique violation"} 
 	ErrSqlDataBase 		 	 = &RepositoryError{Message: "database error"}
 
 	ErrConfigEmptyDB_CONN_STR = &CustomError{Message: "DB_CONN_STR is required"}

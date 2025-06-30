@@ -57,6 +57,10 @@ func (us *userService) Register(ctx context.Context, email, password string) (*m
 	// Сохранение пользователя в базу данных через репозиторий
 	err = us.userRepo.CreateUser(ctx, &user)
 	if err != nil {
+		if err == apperrors.ErrSqlUniqueViolation {
+			us.logger.Warn("user with this email already exists", zap.Error(err), zap.String("email", email))
+			return nil, err
+		}
 		us.logger.Error("Failed to save user to database", zap.Error(err))
 		return nil, apperrors.ErrDataBase
 	}

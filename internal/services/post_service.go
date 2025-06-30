@@ -145,7 +145,7 @@ func (ps *postService) CreateComment(ctx context.Context, postID int, content st
 	}
 
 	// Сохранение в базу данных через репозиторий
-	err = ps.postRepo.CreatComment(ctx, &comment)
+	err = ps.postRepo.CreateComment(ctx, &comment)
 	if err != nil {
 		if err == apperrors.ErrSqlForignKeyViolation {
 			ps.logger.Warn("Post not found in database", zap.Error(err))

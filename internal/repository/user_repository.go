@@ -36,6 +36,9 @@ func (ur *userRepository) CreateUser(ctx context.Context, user *models.User) err
 	).Scan(&id)
 
 	if err != nil {
+		if uErr := checkErrUniqueViolation(err); uErr != nil {
+			return uErr
+		}
 		return fmt.Errorf("%w: %v", apperrors.ErrSqlDataBase, err)
 	}
 

@@ -20,3 +20,16 @@ func checkErrForeignKeyViolation(err error) error {
 	}
 	return nil
 }
+
+// Проверяет, является ли ошибка нарушением уникальности (unique violation), если да, то возвращает соответствующую ошибку, иначе nil.
+func checkErrUniqueViolation(err error) error {
+	var pgErr *pgconn.PgError
+	// errors.As проверяет, является ли err ошибкой типа *pgconn.PgError, и если да, то извлекает значение в pgErr.
+	if errors.As(err, &pgErr) {
+		// 23505 - это код ошибки "unique_violation" в PostgreSQL.
+		if pgErr.Code == "23505" {
+			return apperrors.ErrSqlUniqueViolation
+		}
+	}
+	return nil
+}

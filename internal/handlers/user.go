@@ -54,6 +54,9 @@ func (h *UserHandler) register(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "password length must be between 8 and 64 characters"})
 			return
 		}
+        if err == apperrors.ErrSqlUniqueViolation {
+            c.JSON(http.StatusBadRequest, gin.H{"error": "email already in use"})
+        }
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register user"})
         return
     }
