@@ -53,6 +53,9 @@ pet_project_blog/
 - Добавление комментария к посту (`POST /posts/:id/comments`)
 - Получение комментариев поста (`GET /posts/:id/comments`)
 - Гибкая фильтрация полей через query-параметр `fields`
+- Регистрация пользователя (`POST /register`)
+- Вход пользователя (логин) (`POST /login`)
+- Авторизация через cookie (требуется для создания постов и комментариев)
 
 ## 🧪 Примеры запросов
 
@@ -79,4 +82,12 @@ pet_project_blog/
 - Получить комментарии к посту:
   ```sh
   curl http://localhost:8080/posts/1/comments
+  ```
+- Зарегистрировать пользователя:
+  ```sh
+  curl -X POST http://localhost:8080/register -H 'Content-Type: application/json' -d '{"email":"user@example.com","password":"password123"}'
+  ```
+- Войти (логин):
+  ```sh
+  curl -X POST http://localhost:8080/login -H 'Content-Type: application/json' -d '{"email":"user@example.com","password":"password123"}' -c cookies.txt
   ```
