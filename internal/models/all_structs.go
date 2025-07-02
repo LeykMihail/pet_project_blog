@@ -2,6 +2,8 @@ package models
 
 import (
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type Post struct {
@@ -26,4 +28,9 @@ type User struct {
     Email        string    `db:"email"`
     PasswordHash string    `db:"password_hash"`
     CreatedAt    time.Time `db:"created_at"`
+}
+
+type Claims struct {
+    UserID int `json:"user_id"`
+    jwt.RegisteredClaims
 }

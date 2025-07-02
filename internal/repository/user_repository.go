@@ -12,17 +12,18 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type UserRepository interface{
+type UserRepository interface {
 	CreateUser(ctx context.Context, user *models.User) error
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
+	GetUserByID(ctx context.Context, id int) (*models.User, error)
 }
 
 type userRepository struct {
-    db *sqlx.DB
+	db *sqlx.DB
 }
 
 func NewUserRepository(db *sqlx.DB) UserRepository {
-    return &userRepository{db: db}
+	return &userRepository{db: db}
 }
 
 func (ur *userRepository) CreateUser(ctx context.Context, user *models.User) error {
@@ -53,6 +54,20 @@ func (ur *userRepository) GetUserByEmail(ctx context.Context, email string) (*mo
 	// Выполняем SQL запрос для получения user по email
 	err := ur.db.GetContext(ctx, &user,
 		`SELECT id, email, password_hash, created_at FROM users WHERE email = $1`, email)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, apperrors.ErrSqlNoFoundRows
+		}
+		return nil, fmt.Errorf("%w: %v", apperrors.ErrSqlDataBase, err)
+	}
+	return &user, nil
+}
+
+func (ur *userRepository) GetUserByID(ctx context.Context, id int) (*models.User, error) {
+	var user models.User
+	// Выполняем SQL запрос для получения user по id
+	err := ur.db.GetContext(ctx, &user,
+		`SELECT id, email, password_hash, created_at FROM users WHERE id = $1`, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, apperrors.ErrSqlNoFoundRows

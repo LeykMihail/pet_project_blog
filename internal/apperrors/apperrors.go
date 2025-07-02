@@ -13,6 +13,7 @@ var (
 	ErrNotFoundPost    = &ServiceError{Message: "post not found"}
 	ErrNotFoundUser    = &ServiceError{Message: "user not found"}
 	ErrDataBase        = &ServiceError{Message: "database error"}
+	ErrJWT				= &ServiceError{Message: "JWT error"}
 
 	ErrSqlNoFoundRows 		 = &RepositoryError{Message: "rows not found"}
 	ErrSqlForignKeyViolation = &RepositoryError{Message: "foreign key violation"}

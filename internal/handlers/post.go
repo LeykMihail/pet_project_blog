@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"pet_project_blog/internal/apperrors"
+	"pet_project_blog/internal/config"
 	"pet_project_blog/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -27,12 +28,12 @@ func NewPostHandler(postService services.PostService, logger *zap.Logger) *PostH
 }
 
 // RegisterRoutes регистрирует маршруты для постов.
-func RegisterRoutesPost(r *gin.Engine, postHandler *PostHandler) {
+func RegisterRoutesPost(r *gin.Engine, postHandler *PostHandler, cfg *config.Config, userService services.UserService) {
 	r.GET("/", postHandler.getHome)
 	r.GET("/posts", postHandler.getAllPosts)
-	r.POST("/posts", AuthMiddleware(postHandler.logger), postHandler.createPost)
+	r.POST("/posts", AuthMiddleware(postHandler.logger, cfg, userService), postHandler.createPost)
 	r.GET("/posts/:id", postHandler.getPost)
-	r.POST("/posts/:id/comments", AuthMiddleware(postHandler.logger), postHandler.createComment)
+	r.POST("/posts/:id/comments", AuthMiddleware(postHandler.logger, cfg, userService), postHandler.createComment)
 	r.GET("/posts/:id/comments", postHandler.getComments)
 }
 

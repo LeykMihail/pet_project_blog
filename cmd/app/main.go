@@ -75,7 +75,7 @@ func main() {
 	userService := services.NewUserService(userRepo, logger)
 	postService := services.NewPostService(postRepo, logger)
 	postHandler := handlers.NewPostHandler(postService, logger)
-	userHandler := handlers.NewUserHandler(userService, logger)
+	userHandler := handlers.NewUserHandler(userService, logger, cfg)
 
 	// Инициализация Gin
 	r := gin.Default()
@@ -88,7 +88,7 @@ func main() {
 	}
 
 	// Регистрация маршрутов
-	handlers.RegisterRoutesPost(r, postHandler)
+	handlers.RegisterRoutesPost(r, postHandler, cfg, userService)
 	handlers.RegisterRoutesUser(r, userHandler)
 
 	// Запуск сервера
