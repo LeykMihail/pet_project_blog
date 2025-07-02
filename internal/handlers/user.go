@@ -27,11 +27,6 @@ func NewUserHandler(userService services.UserService, logger *zap.Logger, cfg *c
 	}
 }
 
-func RegisterRoutesUser(r *gin.Engine, userHandler *UserHandler) {
-	r.POST("/register", userHandler.register)
-	r.POST("/login", userHandler.login)
-}
-
 // register обрабатывает POST /register (регистрация пользователя).
 func (h *UserHandler) register(c *gin.Context) {
 	ctx := c.Request.Context()

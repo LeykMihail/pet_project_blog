@@ -2,17 +2,12 @@ package main
 
 import (
 	"pet_project_blog/internal/config"
+	"pet_project_blog/internal/db"
 	"pet_project_blog/internal/handlers"
 	"pet_project_blog/internal/logger"
-	"pet_project_blog/internal/repository"
-	"pet_project_blog/internal/services"
-	"pet_project_blog/internal/db"
+	"pet_project_blog/internal/app"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"go.uber.org/zap"
 )
 
@@ -34,38 +29,22 @@ func main() {
 	}
 	logger.Info("Configuration loaded successfully")
 
-	// Подключение db
-	blogDB, err := db.NewDB(cfg.ConnectBdStr)
-	if err != nil {
-		logger.Fatal("Unable to connect to database or ping failed", zap.Error(err))
-	}
-	defer blogDB.Close()
-	logger.Info("Connected to database successfully")
-
-	// Настройка миграций
-	m, err := migrate.New(
-		"file://internal/migrations",
-		cfg.ConnectBdStr,
-	)
-	if err != nil {
-		logger.Fatal("Failed to initialize migrations",
-			zap.Error(err),
-		)
-	}
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		logger.Fatal("Failed to apply migrations",
-			zap.Error(err),
-		)
+	// Применение миграций
+	if err := db.ApplyMigrations("file://internal/migrations", cfg.ConnectBdStr); err != nil {
+		logger.Fatal("Failed to apply migrations", zap.Error(err))
 	}
 	logger.Info("Migrations applied successfully")
 
+	// Открытие соединения
+	blogDB, err := db.NewDB(cfg.ConnectBdStr)
+	if err != nil {
+		logger.Fatal("Unable to connect to database", zap.Error(err))
+	}
+	defer blogDB.Close() // Закрытие пула соединений
+	logger.Info("Connected to database successfully")
+
 	// Инициализация слоев приложения
-	userRepo := repository.NewUserRepository(blogDB)
-	postRepo := repository.NewPostRepository(blogDB)
-	userService := services.NewUserService(userRepo, logger)
-	postService := services.NewPostService(postRepo, logger)
-	postHandler := handlers.NewPostHandler(postService, logger)
-	userHandler := handlers.NewUserHandler(userService, logger, cfg)
+	AppLayers := app.InitAppLayers(blogDB, logger, cfg)
 
 	// Инициализация Gin
 	r := gin.Default()
@@ -78,13 +57,10 @@ func main() {
 	}
 
 	// Регистрация маршрутов
-	handlers.RegisterRoutesPost(r, postHandler, cfg, userService)
-	handlers.RegisterRoutesUser(r, userHandler)
+	handlers.RegisterRoutes(r, cfg, AppLayers.PostHandler, AppLayers.UserHandler, AppLayers.UserService)
 
 	// Запуск сервера
 	if err := r.Run(":" + cfg.Port); err != nil {
-		logger.Fatal("Failed to start server",
-			zap.Error(err),
-		)
+		logger.Fatal("Failed to start server", zap.Error(err))
 	}
 }
