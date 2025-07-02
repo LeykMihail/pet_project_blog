@@ -89,5 +89,16 @@ pet_project_blog/
   ```
 - Войти (логин):
   ```sh
-  curl -X POST http://localhost:8080/login -H 'Content-Type: application/json' -d '{"email":"user@example.com","password":"password123"}' -c cookies.txt
+  curl -X POST http://localhost:8080/login -H 'Content-Type: application/json' -d '{"email":"user@example.com","password":"password123"}'
+  ```
+
+- Получить JWT-токен:
+  После успешного логина в ответе будет поле `token`. Скопируйте его для дальнейших запросов.
+
+- Использовать токен для авторизованных запросов (например, создать пост):
+  ```sh
+  curl -X POST http://localhost:8080/posts \
+    -H 'Content-Type: application/json' \
+    -H 'Authorization: Bearer <ваш_токен>' \
+    -d '{"title":"Заголовок","content":"Текст поста"}'
   ```
