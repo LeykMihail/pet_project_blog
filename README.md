@@ -9,9 +9,11 @@ pet_project_blog/
   cmd/app/main.go         # Точка входа
   internal/
     apperrors/            # Кастомные ошибки
+    app/                  # Инициализация слоёв приложения (AppLayers)
     config/               # Конфигурация и переменные окружения
-    handlers/             # HTTP-обработчики (Gin)
-    logger/               # Найстройка логгера (zap)
+    db/                   # Работа с БД и миграциями
+    handlers/             # HTTP-обработчики (Gin) и router.go (регистрация маршрутов)
+    logger/               # Настройка логгера (zap)
     migrations/           # Миграции БД (SQL)
     models/               # Модели данных
     repository/           # Работа с БД (PostgreSQL)
