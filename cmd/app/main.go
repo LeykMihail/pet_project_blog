@@ -6,13 +6,13 @@ import (
 	"pet_project_blog/internal/logger"
 	"pet_project_blog/internal/repository"
 	"pet_project_blog/internal/services"
+	"pet_project_blog/internal/db"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 )
 
@@ -34,22 +34,12 @@ func main() {
 	}
 	logger.Info("Configuration loaded successfully")
 
-	// Открытие соединения
-	blogDB, err := sqlx.Open("pgx", cfg.ConnectBdStr)
+	// Подключение db
+	blogDB, err := db.NewDB(cfg.ConnectBdStr)
 	if err != nil {
-		logger.Fatal("Unable to connect to database",
-			zap.Error(err),
-		)
+		logger.Fatal("Unable to connect to database or ping failed", zap.Error(err))
 	}
-	defer blogDB.Close() // Закрытие пула соединений
-
-	// Проверка соединения
-	err = blogDB.Ping()
-	if err != nil {
-		logger.Fatal("Ping failed",
-			zap.Error(err),
-		)
-	}
+	defer blogDB.Close()
 	logger.Info("Connected to database successfully")
 
 	// Настройка миграций
