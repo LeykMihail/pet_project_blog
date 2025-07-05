@@ -30,8 +30,8 @@ type postService struct {
 // NewPostService создает новый экземпляр PostService
 func NewPostService(postRepo repository.PostRepository, logger *zap.Logger) PostService {
 	return &postService{
-		postRepo: postRepo, 
-		logger: logger,
+		postRepo: postRepo,
+		logger:   logger,
 	}
 }
 
@@ -53,7 +53,7 @@ func (ps *postService) CreatePost(ctx context.Context, title, content string, us
 		Title:     title,
 		Content:   content,
 		CreatedAt: time.Now(),
-		UserID: userID,
+		UserID:    userID,
 	}
 
 	// Сохранение в базу данных через репозиторий
@@ -79,12 +79,14 @@ func (ps *postService) GetPost(ctx context.Context, id int) (*models.Post, error
 	// Получение поста из базы данных через репозиторий
 	post, err := ps.postRepo.GetPost(ctx, id)
 	if err != nil {
-		if err == apperrors.ErrSqlNoFoundRows {
+		switch err {
+		case apperrors.ErrSqlNoFoundRows:
 			ps.logger.Warn("Post not found in database", zap.Int("id", id))
 			return nil, apperrors.ErrNotFoundPost
+		default:
+			ps.logger.Error("Failed to fetch post from database", zap.Error(err))
+			return nil, apperrors.ErrDataBase
 		}
-		ps.logger.Error("Failed to fetch post from database", zap.Error(err))
-        return nil, apperrors.ErrDataBase
 	}
 
 	// Получение всех комментариев поста из базы данных через репозиторий
@@ -132,27 +134,31 @@ func (ps *postService) CreateComment(ctx context.Context, postID int, content st
 		CreatedAt: time.Now(),
 		UserID:    userID,
 	}
-	
+
 	// Проверка существования поста
 	_, err := ps.postRepo.GetPost(ctx, postID)
 	if err != nil {
-		if err == apperrors.ErrSqlNoFoundRows {
+		switch err {
+		case apperrors.ErrSqlNoFoundRows:
 			ps.logger.Warn("Post not found in database", zap.Int("id", postID))
 			return nil, apperrors.ErrNotFoundPost
+		default:
+			ps.logger.Error("Failed to fetch post from database", zap.Error(err))
+			return nil, apperrors.ErrDataBase
 		}
-		ps.logger.Error("Failed to fetch post from database", zap.Error(err))
-        return nil, apperrors.ErrDataBase
 	}
 
 	// Сохранение в базу данных через репозиторий
 	err = ps.postRepo.CreateComment(ctx, &comment)
 	if err != nil {
-		if err == apperrors.ErrSqlForignKeyViolation {
+		switch err {
+		case apperrors.ErrSqlForignKeyViolation:
 			ps.logger.Warn("Post not found in database", zap.Error(err))
 			return nil, apperrors.ErrNotFoundPost
+		default:
+			ps.logger.Error("Failed to save comment to database", zap.Error(err), zap.Int("postID", postID))
+			return nil, apperrors.ErrDataBase
 		}
-		ps.logger.Error("Failed to save comment to database", zap.Error(err), zap.Int("postID", postID))
-		return nil, apperrors.ErrDataBase
 	}
 
 	ps.logger.Info("Comment created successfully", zap.Int("id", comment.ID))
@@ -166,16 +172,18 @@ func (ps *postService) GetCommentsByPostID(ctx context.Context, postID int) ([]*
 	if err := validateID(ps.logger, postID); err != nil {
 		return nil, err
 	}
-	
+
 	// Проверка существования поста
 	_, err := ps.postRepo.GetPost(ctx, postID)
 	if err != nil {
-		if err == apperrors.ErrSqlNoFoundRows {
+		switch err {
+		case apperrors.ErrSqlNoFoundRows:
 			ps.logger.Warn("Post not found in database", zap.Int("id", postID))
 			return nil, apperrors.ErrNotFoundPost
+		default:
+			ps.logger.Error("Failed to fetch post from database", zap.Error(err))
+			return nil, apperrors.ErrDataBase
 		}
-		ps.logger.Error("Failed to fetch post from database", zap.Error(err))
-        return nil, apperrors.ErrDataBase
 	}
 
 	// Получение всех комментариев поста из базы данных через репозиторий

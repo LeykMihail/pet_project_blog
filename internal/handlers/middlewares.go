@@ -70,12 +70,16 @@ func AuthMiddleware(logger *zap.Logger, cfg *config.Config, us services.UserServ
         // Проверяем, что пользователь с таким userID существует в базе данных
         _, err = us.GetUserByID(c.Request.Context(), userID)
         if err != nil {
-            if err == apperrors.ErrNotFoundUser {
-                logger.Warn("User not found for user_id in JWT", zap.Int("user_id", userID), zap.Error(err))
-                c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-            }else{
-                logger.Error("Database error while checking user existence", zap.Error(err))
-                c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+            switch err{
+                case apperrors.ErrNotFoundUser:
+                    logger.Warn("User not found for user_id in JWT", zap.Int("user_id", userID), zap.Error(err))
+                    c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+                case apperrors.ErrInvalidID:
+                    logger.Warn("Invalid user ID", zap.Int("user_id", userID), zap.Error(err))
+                    c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+                default:
+                    logger.Error("Database error while checking user existence", zap.Error(err))
+                    c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
             }
             c.Abort()
             return

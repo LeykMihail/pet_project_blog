@@ -5,13 +5,13 @@ import (
 	"time"
 
 	"pet_project_blog/internal/apperrors"
+	"pet_project_blog/internal/config"
 	"pet_project_blog/internal/models"
 	"pet_project_blog/internal/repository"
-	"pet_project_blog/internal/config"
 
-	"golang.org/x/crypto/bcrypt"
-	"go.uber.org/zap"
 	"github.com/golang-jwt/jwt/v5"
+	"go.uber.org/zap"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // UserService определяет интерфейс для работы с пользователями
@@ -29,7 +29,7 @@ type userService struct {
 
 // NewUserService создает новый экземпляр UserService
 func NewUserService(userRepo repository.UserRepository, logger *zap.Logger) UserService {
-    return &userService{
+	return &userService{
 		userRepo: userRepo,
 		logger:   logger,
 	}
@@ -60,12 +60,14 @@ func (us *userService) Register(ctx context.Context, email, password string) (*m
 	// Сохранение пользователя в базу данных через репозиторий
 	err = us.userRepo.CreateUser(ctx, &user)
 	if err != nil {
-		if err == apperrors.ErrSqlUniqueViolation {
+		switch err {
+		case apperrors.ErrSqlUniqueViolation:
 			us.logger.Warn("user with this email already exists", zap.Error(err), zap.String("email", email))
 			return nil, err
+		default:
+			us.logger.Error("Failed to save user to database", zap.Error(err))
+			return nil, apperrors.ErrDataBase
 		}
-		us.logger.Error("Failed to save user to database", zap.Error(err))
-		return nil, apperrors.ErrDataBase
 	}
 
 	us.logger.Info("Register user successfully", zap.Int("id", user.ID), zap.String("email", email))
@@ -84,12 +86,14 @@ func (us *userService) Login(ctx context.Context, email, password string, cfg *c
 	// Получение пользователя из базы данных по email
 	user, err := us.userRepo.GetUserByEmail(ctx, email)
 	if err != nil {
-		if err == apperrors.ErrSqlNoFoundRows {
+		switch err {
+		case apperrors.ErrSqlNoFoundRows:
 			us.logger.Warn("User not found in database", zap.String("email", email))
 			return nil, "", apperrors.ErrNotFoundUser
+		default:
+			us.logger.Error("Failed to fetch user from database", zap.Error(err))
+			return nil, "", apperrors.ErrDataBase
 		}
-		us.logger.Error("Failed to fetch user from database", zap.Error(err))
-		return nil, "", apperrors.ErrDataBase
 	}
 
 	// Проверка правильности пароля с помощью bcrypt
@@ -99,38 +103,43 @@ func (us *userService) Login(ctx context.Context, email, password string, cfg *c
 	}
 
 	expirationTime := time.Now().Add(1 * time.Hour)
-    claims := &models.Claims{
-        UserID: user.ID,
-        RegisteredClaims: jwt.RegisteredClaims{
-            ExpiresAt: jwt.NewNumericDate(expirationTime),
-        },
-    }
+	claims := &models.Claims{
+		UserID: user.ID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expirationTime),
+		},
+	}
 	// Создаем токен с указанными claim
-    token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	// Генерируем токен с помощью секретного ключа
 	tokenString, err := token.SignedString([]byte(cfg.JWTSecret))
-    if err != nil {
-        us.logger.Error("Failed to generate JWT", zap.Error(err))
-        return nil, "", apperrors.ErrJWT
-    }
-    us.logger.Info("Login user successfully", zap.Int("id", user.ID), zap.String("email", email))
-    return user, tokenString, nil
+	if err != nil {
+		us.logger.Error("Failed to generate JWT", zap.Error(err))
+		return nil, "", apperrors.ErrJWT
+	}
+	us.logger.Info("Login user successfully", zap.Int("id", user.ID), zap.String("email", email))
+	return user, tokenString, nil
 }
 
 // Получить пользователя по ID
 func (us *userService) GetUserByID(ctx context.Context, id int) (*models.User, error) {
 	us.logger.Info("Start get user by ID", zap.Int("id", id))
 
-	// Нужно добавить валидацию id
+	// Валидация ID
+	if err := validateID(us.logger, id); err != nil {
+		return nil, err
+	}
 
 	user, err := us.userRepo.GetUserByID(ctx, id)
 	if err != nil {
-		if err == apperrors.ErrSqlNoFoundRows {
+		switch err {
+		case apperrors.ErrSqlNoFoundRows:
 			us.logger.Warn("User not found in database", zap.Int("id", id))
 			return nil, apperrors.ErrNotFoundUser
+		default:
+			us.logger.Error("Failed to fetch user from database", zap.Error(err))
+			return nil, apperrors.ErrDataBase
 		}
-		us.logger.Error("Failed to fetch user from database", zap.Error(err))
-		return nil, apperrors.ErrDataBase
 	}
 
 	us.logger.Info("Get user by ID successfully", zap.Int("id", user.ID), zap.String("email", user.Email))

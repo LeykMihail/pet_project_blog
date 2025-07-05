@@ -52,11 +52,11 @@ func (h *PostHandler) getHome(c *gin.Context) {
 func (h *PostHandler) createPost(c *gin.Context) {
 	ctx := c.Request.Context()
 	userID, exists := c.Get("user_id")
-    if !exists {
-        h.logger.Warn("User ID not found in context", zap.String("handler", "createPost"))
-        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-        return
-    }
+	if !exists {
+		h.logger.Warn("User ID not found in context", zap.String("handler", "createPost"))
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
 
 	var input struct {
 		Title   string `json:"title" binding:"required"`
@@ -72,20 +72,20 @@ func (h *PostHandler) createPost(c *gin.Context) {
 	// Создаем пост по полученным данным
 	post, err := h.postService.CreatePost(ctx, input.Title, input.Content, userID.(int))
 	if err != nil {
-		if err == apperrors.ErrEmptyTitle {
+		switch err {
+		case apperrors.ErrEmptyTitle:
 			c.JSON(http.StatusBadRequest, gin.H{"error": "title must not be empty"})
 			return
-		}
-		if err == apperrors.ErrLengthTitle {
+		case apperrors.ErrLengthTitle:
 			c.JSON(http.StatusBadRequest, gin.H{"error": "maximum length title exceeded"})
 			return
-		}
-		if err == apperrors.ErrEmptyContent {
+		case apperrors.ErrEmptyContent:
 			c.JSON(http.StatusBadRequest, gin.H{"error": "content must not be empty"})
 			return
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create post"})
+			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create post"})
-		return
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
@@ -109,16 +109,17 @@ func (h *PostHandler) getPost(c *gin.Context) {
 	// Получаем пост из сервиса по указанному ID
 	post, err := h.postService.GetPost(ctx, id)
 	if err != nil {
-		if err == apperrors.ErrNotFoundPost {
+		switch err {
+		case apperrors.ErrNotFoundPost:
 			c.JSON(http.StatusNotFound, gin.H{"error": "Post not found"})
 			return
-		}
-		if err == apperrors.ErrInvalidID {
+		case apperrors.ErrInvalidID:
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
 			return
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -175,12 +176,12 @@ func (h *PostHandler) getAllPosts(c *gin.Context) {
 func (h *PostHandler) createComment(c *gin.Context) {
 	ctx := c.Request.Context()
 	userID, exists := c.Get("user_id")
-    if !exists {
-        h.logger.Warn("User ID not found in context", zap.String("handler", "createPost"))
-        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-        return
-    }
-	
+	if !exists {
+		h.logger.Warn("User ID not found in context", zap.String("handler", "createPost"))
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
 	var input struct {
 		Content string `json:"content" binding:"required"`
 	}
@@ -204,20 +205,20 @@ func (h *PostHandler) createComment(c *gin.Context) {
 	// Создаем комментарий по полученным данным
 	comment, err := h.postService.CreateComment(ctx, id, input.Content, userID.(int))
 	if err != nil {
-		if err == apperrors.ErrNotFoundPost {
+		switch err {
+		case apperrors.ErrNotFoundPost:
 			c.JSON(http.StatusNotFound, gin.H{"error": "Post not found"})
 			return
-		}
-		if err == apperrors.ErrInvalidID {
+		case apperrors.ErrInvalidID:
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
 			return
-		}
-		if err == apperrors.ErrEmptyContent {
+		case apperrors.ErrEmptyContent:
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Comment content cannot be empty"})
 			return
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-		return
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
@@ -240,16 +241,17 @@ func (h *PostHandler) getComments(c *gin.Context) {
 
 	comments, err := h.postService.GetCommentsByPostID(ctx, id)
 	if err != nil {
-		if err == apperrors.ErrNotFoundPost {
+		switch err {
+		case apperrors.ErrNotFoundPost:
 			c.JSON(http.StatusNotFound, gin.H{"error": "Post not found"})
 			return
-		}
-		if err == apperrors.ErrInvalidID {
+		case apperrors.ErrInvalidID:
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
 			return
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get comments"})
+			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get comments"})
-		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"comments": comments})

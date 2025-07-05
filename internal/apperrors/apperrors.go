@@ -8,7 +8,7 @@ var (
 	ErrEmptyContent    = &ServiceError{Message: "content cannot be empty"}
 	ErrEmptyPassword   = &ServiceError{Message: "password cannot be empty"}
 	ErrLenghtPassword  = &ServiceError{Message: "incorrect password length"}
-	ErrInvalidID       = &ServiceError{Message: "invalid post ID"}
+	ErrInvalidID       = &ServiceError{Message: "invalid ID"}
 	ErrInvalidPassword = &ServiceError{Message: "invalid user password"}
 	ErrNotFoundPost    = &ServiceError{Message: "post not found"}
 	ErrNotFoundUser    = &ServiceError{Message: "user not found"}

@@ -43,19 +43,20 @@ func (h *UserHandler) register(c *gin.Context) {
 
 	user, err := h.userService.Register(ctx, input.Email, input.Password)
 	if err != nil {
-		if err == apperrors.ErrEmptyPassword {
+		switch err {
+		case apperrors.ErrEmptyPassword:
 			c.JSON(http.StatusBadRequest, gin.H{"error": "password must not be empty"})
 			return
-		}
-		if err == apperrors.ErrLenghtPassword {
+		case apperrors.ErrLenghtPassword:
 			c.JSON(http.StatusBadRequest, gin.H{"error": "password length must be between 8 and 64 characters"})
 			return
-		}
-		if err == apperrors.ErrSqlUniqueViolation {
+		case apperrors.ErrSqlUniqueViolation:
 			c.JSON(http.StatusBadRequest, gin.H{"error": "email already in use"})
+			return
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register user"})
+			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register user"})
-		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"user": gin.H{"id": user.ID, "email": user.Email}})
 }
@@ -76,28 +77,26 @@ func (h *UserHandler) login(c *gin.Context) {
 
 	user, tokenString, err := h.userService.Login(ctx, input.Email, input.Password, h.cfg)
 	if err != nil {
-		if err == apperrors.ErrEmptyPassword {
+		switch err {
+		case apperrors.ErrEmptyPassword:
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "password must not be empty"})
 			return
-		}
-		if err == apperrors.ErrLenghtPassword {
+		case apperrors.ErrLenghtPassword:
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "password length must be between 8 and 64 characters"})
 			return
-		}
-		if err == apperrors.ErrNotFoundUser {
+		case apperrors.ErrNotFoundUser:
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
 			return
-		}
-		if err == apperrors.ErrInvalidPassword {
+		case apperrors.ErrInvalidPassword:
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid password"})
 			return
-		}
-		if err == apperrors.ErrDataBase {
+		case apperrors.ErrDataBase:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 			return
+		default:
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Failed to authorized user"})
+			return
 		}
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Failed to authorized user"})
-		return
 	}
 
 	c.Header("Authorization", "Bearer "+tokenString)
