@@ -16,9 +16,13 @@ type PostService interface {
 	CreatePost(ctx context.Context, title, content string, userID int) (*models.Post, error)
 	GetPost(ctx context.Context, id int) (*models.Post, error)
 	GetAllPosts(ctx context.Context) ([]*models.Post, error)
+	UpdatePost(ctx context.Context, id, userID int, title, content string) (*models.Post, error)
+	DeletePost(ctx context.Context, id, userID int) error
 
 	CreateComment(ctx context.Context, postID int, content string, userID int) (*models.Comment, error)
 	GetCommentsByPostID(ctx context.Context, id int) ([]*models.Comment, error)
+	UpdateComment(ctx context.Context, id, userID, postID int, content string) (*models.Comment, error)
+	DeleteComment(ctx context.Context, id, userID int) error
 }
 
 // postService реализует интерфейс PostService
@@ -116,6 +120,57 @@ func (ps *postService) GetAllPosts(ctx context.Context) ([]*models.Post, error) 
 	return posts, nil
 }
 
+func (ps *postService) UpdatePost(ctx context.Context, id, userID int, title, content string) (*models.Post, error) {
+	ps.logger.Info("Start updating post", zap.Int("id", id))
+	if err := validateID(ps.logger, userID); err != nil {
+		return nil, err
+	}
+	if err := validateID(ps.logger, id); err != nil {
+		return nil, err
+	}
+	if err := validatePostTitle(ps.logger, title); err != nil {
+		return nil, err
+	}
+	if err := validatePostContent(ps.logger, content); err != nil {
+		return nil, err
+	}
+	post := &models.Post{ID: id, UserID: userID, Title: title, Content: content}
+	err := ps.postRepo.UpdatePost(ctx, post)
+	if err != nil {
+		if err == apperrors.ErrSqlNoFoundRows {
+			return nil, apperrors.ErrNotFoundPost
+		}
+		ps.logger.Error("Failed to update post", zap.Error(err))
+		return nil, apperrors.ErrDataBase
+	}
+	updatedPost, err := ps.postRepo.GetPost(ctx, id)
+	if err != nil {
+		return nil, apperrors.ErrDataBase
+	}
+	ps.logger.Info("Post updated successfully", zap.Int("id", id))
+	return updatedPost, nil
+}
+
+func (ps *postService) DeletePost(ctx context.Context, id, userID int) error {
+	ps.logger.Info("Start deleting post", zap.Int("id", id))
+	if err := validateID(ps.logger, userID); err != nil {
+		return err
+	}
+	if err := validateID(ps.logger, id); err != nil {
+		return err
+	}
+	err := ps.postRepo.DeletePost(ctx, id, userID)
+	if err != nil {
+		if err == apperrors.ErrSqlNoFoundRows {
+			return apperrors.ErrNotFoundPost
+		}
+		ps.logger.Error("Failed to delete post", zap.Error(err))
+		return apperrors.ErrDataBase
+	}
+	ps.logger.Info("Post deleted successfully", zap.Int("id", id))
+	return nil
+}
+
 func (ps *postService) CreateComment(ctx context.Context, postID int, content string, userID int) (*models.Comment, error) {
 	ps.logger.Info("Start creating new comment", zap.Int("post ID", postID))
 
@@ -195,4 +250,72 @@ func (ps *postService) GetCommentsByPostID(ctx context.Context, postID int) ([]*
 
 	ps.logger.Info("Fetched all comments successfully", zap.Int("count", len(comments)), zap.Int("postID", postID))
 	return comments, nil
+}
+
+func (ps *postService) UpdateComment(ctx context.Context, id, userID, postID int, content string) (*models.Comment, error) {
+	ps.logger.Info("Start updating comment", zap.Int("id", id))
+	if err := validateID(ps.logger, id); err != nil {
+		return nil, err
+	}
+	if err := validateID(ps.logger, userID); err != nil {
+		return nil, err
+	}
+	if err := validateID(ps.logger, postID); err != nil {
+		return nil, err
+	}
+	if err := validateCommentContent(ps.logger, content); err != nil {
+		return nil, err
+	}
+
+	// Проверка существования поста
+	_, err := ps.postRepo.GetPost(ctx, postID)
+	if err != nil {
+		switch err {
+		case apperrors.ErrSqlNoFoundRows:
+			ps.logger.Warn("Post not found in database", zap.Int("id", postID))
+			return nil, apperrors.ErrNotFoundPost
+		default:
+			ps.logger.Error("Failed to fetch post from database", zap.Error(err))
+			return nil, apperrors.ErrDataBase
+		}
+	}
+
+	comment := &models.Comment{ID: id, UserID: userID, PostID: postID, Content: content}
+	err = ps.postRepo.UpdateComment(ctx, comment)
+	if err != nil {
+		switch err {
+		case apperrors.ErrSqlNoFoundRows:
+			ps.logger.Warn("Comment not found in database", zap.Int("id", id))
+			return nil, apperrors.ErrNotFoundComment
+		case apperrors.ErrSqlForignKeyViolation:
+			ps.logger.Warn("Post not found in database", zap.Error(err))
+			return nil, apperrors.ErrNotFoundPost
+		default:
+			ps.logger.Error("Failed to update comment", zap.Error(err))
+			return nil, apperrors.ErrDataBase
+		}
+	}
+	ps.logger.Info("Comment updated successfully", zap.Int("id", id))
+	return comment, nil
+}
+
+func (ps *postService) DeleteComment(ctx context.Context, id, userID int) error {
+	ps.logger.Info("Start deleting comment", zap.Int("id", id))
+	if err := validateID(ps.logger, id); err != nil {
+		return err
+	}
+	if err := validateID(ps.logger, userID); err != nil {
+		return err
+	}
+
+	err := ps.postRepo.DeleteComment(ctx, id, userID)
+	if err != nil {
+		if err == apperrors.ErrSqlNoFoundRows {
+			return apperrors.ErrNotFoundComment
+		}
+		ps.logger.Error("Failed to delete comment", zap.Error(err))
+		return apperrors.ErrDataBase
+	}
+	ps.logger.Info("Comment deleted successfully", zap.Int("id", id))
+	return nil
 }

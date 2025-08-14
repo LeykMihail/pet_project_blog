@@ -11,9 +11,10 @@ var (
 	ErrInvalidID       = &ServiceError{Message: "invalid ID"}
 	ErrInvalidPassword = &ServiceError{Message: "invalid user password"}
 	ErrNotFoundPost    = &ServiceError{Message: "post not found"}
+	ErrNotFoundComment = &ServiceError{Message: "comment not found"}
 	ErrNotFoundUser    = &ServiceError{Message: "user not found"}
 	ErrDataBase        = &ServiceError{Message: "database error"}
-	ErrJWT				= &ServiceError{Message: "JWT error"}
+	ErrJWT			   = &ServiceError{Message: "JWT error"}
 
 	ErrSqlNoFoundRows 		 = &RepositoryError{Message: "rows not found"}
 	ErrSqlForignKeyViolation = &RepositoryError{Message: "foreign key violation"}

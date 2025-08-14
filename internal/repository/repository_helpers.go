@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// Проверяет является ли оштбка нарушение foreign key, если да, то возвращает ошибку, иначе nil
+// Проверяет является ли ошибка нарушением foreign key, если да, то возвращает ошибку, иначе nil
 func checkErrForeignKeyViolation(err error) error {
 	var pgErr *pgconn.PgError
 	// errors.As проверяет, является ли err ошибкой типа *pgconn.PgError, если да то извлекает err в pgErr

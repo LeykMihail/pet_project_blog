@@ -256,3 +256,189 @@ func (h *PostHandler) getComments(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"comments": comments})
 }
+
+// updatePost обрабатывает PUT/PATCH /posts/:id (обновление поста)
+func (h *PostHandler) updatePost(c *gin.Context) {
+    ctx := c.Request.Context()
+
+    // Получаем id поста из параметра URL и преобразуем в int
+    idStr := c.Param("id")
+    id, err := strconv.Atoi(idStr)
+    if err != nil {
+        h.logger.Warn("Invalid ID format", zap.String("id", idStr))
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+        return
+    }
+
+    // Получаем user_id из контекста (устанавливается middleware аутентификации)
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+
+    // Структура для привязки входных данных (title и content обязательны)
+    var input struct {
+        Title   string `json:"title" binding:"required"`
+        Content string `json:"content" binding:"required"`
+    }
+
+    // Привязываем JSON из запроса к структуре input
+    if err := c.ShouldBindJSON(&input); err != nil {
+        h.logger.Warn("Invalid input format", zap.Error(err))
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+        return
+    }
+
+    // Вызываем сервис для обновления поста
+    post, err := h.postService.UpdatePost(ctx, id, userID.(int), input.Title, input.Content)
+    if err != nil {
+        // Обрабатываем возможные ошибки
+        switch err {
+        case apperrors.ErrNotFoundPost:
+            // Пост не найден или пользователь не авторизован на изменение
+            c.JSON(http.StatusNotFound, gin.H{"error": "Post not found or unauthorized"})
+            return
+        case apperrors.ErrSqlUniqueViolation:
+            // Нарушение уникальности title
+            c.JSON(http.StatusBadRequest, gin.H{"error": "Post with this title already exists"})
+            return
+        default:
+            // Прочие ошибки сервера
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update post"})
+            return
+        }
+    }
+
+    // Возвращаем обновленный пост в ответе
+    c.JSON(http.StatusOK, gin.H{"post": post})
+}
+
+// deletePost обрабатывает DELETE /posts/:id (удаление поста)
+func (h *PostHandler) deletePost(c *gin.Context) {
+    // Получаем контекст запроса
+    ctx := c.Request.Context()
+
+    // Получаем id поста из параметра URL и преобразуем в int
+    idStr := c.Param("id")
+    id, err := strconv.Atoi(idStr)
+    if err != nil {
+        h.logger.Warn("Invalid ID format", zap.String("id", idStr))
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+        return
+    }
+
+    // Получаем user_id из контекста (устанавливается middleware аутентификации)
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+
+    // Вызываем сервис для удаления поста
+    err = h.postService.DeletePost(ctx, id, userID.(int))
+    if err != nil {
+        // Обрабатываем возможные ошибки
+        switch err {
+        case apperrors.ErrNotFoundPost:
+            c.JSON(http.StatusNotFound, gin.H{"error": "Post not found or unauthorized"})
+            return
+        default:
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete post"})
+            return
+        }
+    }
+
+    // Возвращаем успешный ответ без содержимого
+    c.JSON(http.StatusNoContent, gin.H{})
+}
+
+// updateComment обрабатывает PATCH /posts/:id/comments/:commentId (обновление комментария)
+func (h *PostHandler) updateComment(c *gin.Context) {
+    // Получаем контекст запроса
+    ctx := c.Request.Context()
+
+    // Получаем id поста из параметра URL и преобразуем в int
+    postIDStr := c.Param("id")
+    commentIDStr := c.Param("commentId")
+    postID, err := strconv.Atoi(postIDStr)
+    if err != nil {
+        h.logger.Warn("Invalid post ID format", zap.String("id", postIDStr))
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+        return
+    }
+    // Получаем id комментария из параметра URL и преобразуем в int
+    commentID, err := strconv.Atoi(commentIDStr)
+    if err != nil {
+        h.logger.Warn("Invalid comment ID format", zap.String("id", commentIDStr))
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid comment ID"})
+        return
+    }
+    // Получаем user_id из контекста (устанавливается middleware аутентификации)
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+    // Структура для входных данных (тело запроса)
+    var input struct {
+        Content string `json:"content" binding:"required"`
+    }
+    // Привязываем JSON из запроса к структуре input
+    if err := c.ShouldBindJSON(&input); err != nil {
+        h.logger.Warn("Invalid input format", zap.Error(err))
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+        return
+    }
+    // Вызываем сервис для обновления комментария
+    comment, err := h.postService.UpdateComment(ctx, commentID, userID.(int), postID, input.Content)
+    if err != nil {
+        // Обрабатываем возможные ошибки
+        switch err {
+        case apperrors.ErrNotFoundPost:
+            c.JSON(http.StatusNotFound, gin.H{"error": "Comment not found or unauthorized"})
+            return
+        default:
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update comment"})
+            return
+        }
+    }
+    // Возвращаем обновленный комментарий в ответе
+    c.JSON(http.StatusOK, gin.H{"comment": comment})
+}
+
+// deleteComment обрабатывает DELETE /posts/:id/comments/:commentId (удаление комментария)
+func (h *PostHandler) deleteComment(c *gin.Context) {
+    // Получаем контекст запроса
+    ctx := c.Request.Context()
+
+    // Получаем id комментария из параметра URL и преобразуем в int
+    commentIDStr := c.Param("commentId")
+    commentID, err := strconv.Atoi(commentIDStr)
+    if err != nil {
+        h.logger.Warn("Неверный формат comment ID", zap.String("id", commentIDStr))
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid comment ID"})
+        return
+    }
+    // Получаем user_id из контекста (устанавливается middleware аутентификации)
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+    // Вызываем сервис для удаления комментария
+    err = h.postService.DeleteComment(ctx, commentID, userID.(int))
+    if err != nil {
+        // Обрабатываем возможные ошибки
+        switch err {
+        case apperrors.ErrNotFoundPost:
+            c.JSON(http.StatusNotFound, gin.H{"error": "Comment not found or unauthorized"})
+            return
+        default:
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete comment"})
+            return
+        }
+    }
+    // Возвращаем успешный ответ без содержимого
+    c.JSON(http.StatusNoContent, gin.H{})
+}

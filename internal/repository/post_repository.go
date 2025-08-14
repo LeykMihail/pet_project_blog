@@ -17,9 +17,13 @@ type PostRepository interface {
 	CreatePost(ctx context.Context, post *models.Post) error
 	GetPost(ctx context.Context, id int) (*models.Post, error)
 	GetAllPosts(ctx context.Context) ([]*models.Post, error)
+	UpdatePost(ctx context.Context, post *models.Post) error
+	DeletePost(ctx context.Context, id, userID int) error
 
 	CreateComment(ctx context.Context, comment *models.Comment) error
 	GetCommentsByPostID(ctx context.Context, id int) ([]*models.Comment, error)
+	UpdateComment(ctx context.Context, comment *models.Comment) error
+	DeleteComment(ctx context.Context, id, userID int) error
 }
 
 // postRepository реализует интерфейс PostRepository
@@ -83,6 +87,45 @@ func (pr *postRepository) GetAllPosts(ctx context.Context) ([]*models.Post, erro
 	return posts, nil
 }
 
+func (pr *postRepository) UpdatePost(ctx context.Context, post *models.Post) error {
+	result, err := pr.db.ExecContext(ctx,
+		`UPDATE posts SET title = $1, content = $2
+		WHERE id = $3 and user_id = $4`,
+		post.Title, post.Content, post.ID, post.UserID,
+	)
+	if err != nil {
+		// Проверяем специфические ошибки БД
+		if fkErr := checkErrForeignKeyViolation(err); fkErr != nil {
+			return fkErr
+		}
+		if uniqueErr := checkErrUniqueViolation(err); uniqueErr != nil {
+			return uniqueErr
+		}
+		return fmt.Errorf("%w: %v", apperrors.ErrSqlDataBase, err)
+	}
+	if rows, _ := result.RowsAffected(); rows == 0 {
+		return apperrors.ErrSqlNoFoundRows
+	}
+	return nil
+}
+
+func (pr *postRepository) DeletePost(ctx context.Context, id, userID int) error {
+	result, err := pr.db.ExecContext(ctx,
+		`DELETE FROM posts WHERE id = $1 AND user_id = $2`,
+		id, userID)
+	if err != nil {
+		// Проверяем специфические ошибки БД
+		if fkErr := checkErrForeignKeyViolation(err); fkErr != nil {
+			return fkErr
+		}
+		return fmt.Errorf("%w: %v", apperrors.ErrSqlDataBase, err)
+	}
+	if rows, _ := result.RowsAffected(); rows == 0 {
+		return apperrors.ErrSqlNoFoundRows
+	}
+	return nil
+}
+
 func (pr *postRepository) CreateComment(ctx context.Context, comment *models.Comment) error {
 	// Выполнение SQL запроса для вставки нового поста с возвратом ID
 	var commentID int
@@ -116,4 +159,37 @@ func (pr *postRepository) GetCommentsByPostID(ctx context.Context, id int) ([]*m
 	}
 
 	return comments, nil
+}
+
+func (pr *postRepository) UpdateComment(ctx context.Context, comment *models.Comment) error {
+	result, err := pr.db.ExecContext(ctx,
+		`UPDATE comments SET content = $1 WHERE id = $2 AND user_id = $3 AND post_id = $4`,
+		comment.Content, comment.ID, comment.UserID, comment.PostID)
+	if err != nil {
+		// Проверяем специфические ошибки БД
+		if fkErr := checkErrForeignKeyViolation(err); fkErr != nil {
+			return fkErr
+		}
+		return fmt.Errorf("%w: %v", apperrors.ErrSqlDataBase, err)
+	}
+	if rows, _ := result.RowsAffected(); rows == 0 {
+		return apperrors.ErrSqlNoFoundRows
+	}
+	return nil
+}
+
+func (pr *postRepository) DeleteComment(ctx context.Context, id, userID int) error {
+	result, err := pr.db.ExecContext(ctx,
+		`DELETE FROM comments WHERE id = $1 AND user_id = $2`, id, userID)
+	if err != nil {
+		// Проверяем специфические ошибки БД
+		if fkErr := checkErrForeignKeyViolation(err); fkErr != nil {
+			return fkErr
+		}
+		return fmt.Errorf("%w: %v", apperrors.ErrSqlDataBase, err)
+	}
+	if rows, _ := result.RowsAffected(); rows == 0 {
+		return apperrors.ErrSqlNoFoundRows
+	}
+	return nil
 }
