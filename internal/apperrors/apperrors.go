@@ -3,18 +3,20 @@ package apperrors
 
 // Ошибки сервиса
 var (
-	ErrEmptyTitle      = &ServiceError{Message: "title cannot be empty"}
-	ErrLengthTitle	   = &ServiceError{Message: "maximum length title exceeded"}
-	ErrEmptyContent    = &ServiceError{Message: "content cannot be empty"}
-	ErrEmptyPassword   = &ServiceError{Message: "password cannot be empty"}
-	ErrLenghtPassword  = &ServiceError{Message: "incorrect password length"}
-	ErrInvalidID       = &ServiceError{Message: "invalid ID"}
-	ErrInvalidPassword = &ServiceError{Message: "invalid user password"}
-	ErrNotFoundPost    = &ServiceError{Message: "post not found"}
-	ErrNotFoundComment = &ServiceError{Message: "comment not found"}
-	ErrNotFoundUser    = &ServiceError{Message: "user not found"}
-	ErrDataBase        = &ServiceError{Message: "database error"}
-	ErrJWT			   = &ServiceError{Message: "JWT error"}
+	ErrEmptyTitle           = &ServiceError{Message: "title cannot be empty"}
+	ErrLengthTitle          = &ServiceError{Message: "maximum length title exceeded"}
+	ErrEmptyContent         = &ServiceError{Message: "content cannot be empty"}
+	ErrEmptyPassword        = &ServiceError{Message: "password cannot be empty"}
+	ErrLenghtPassword       = &ServiceError{Message: "incorrect password length"}
+	ErrInvalidID            = &ServiceError{Message: "invalid ID"}
+	ErrSelfSubscription     = &ServiceError{Message: "cannot subscribe to yourself"}
+	ErrInvalidPassword      = &ServiceError{Message: "invalid user password"}
+	ErrNotFoundPost         = &ServiceError{Message: "post not found"}
+	ErrNotFoundComment      = &ServiceError{Message: "comment not found"}
+	ErrNotFoundUser         = &ServiceError{Message: "user not found"}
+	ErrNotFoundSubscription = &ServiceError{Message: "subscription not found"}
+	ErrDataBase             = &ServiceError{Message: "database error"}
+	ErrJWT                  = &ServiceError{Message: "JWT error"}
 
 	ErrSqlNoFoundRows 		 = &RepositoryError{Message: "rows not found"}
 	ErrSqlForignKeyViolation = &RepositoryError{Message: "foreign key violation"}

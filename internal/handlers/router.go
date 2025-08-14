@@ -23,4 +23,7 @@ func RegisterRoutes(r *gin.Engine, cfg *config.Config, postHandler *PostHandler,
 
 	r.POST("/register", userHandler.register)
 	r.POST("/login", userHandler.login)
+	r.POST("/subscriptions", AuthMiddleware(userHandler.logger, cfg, userService), userHandler.createSubscription)
+    r.GET("/subscriptions", AuthMiddleware(userHandler.logger, cfg, userService), userHandler.getSubscriptions)
+    r.DELETE("/subscriptions/:authorId", AuthMiddleware(userHandler.logger, cfg, userService), userHandler.deleteSubscription)
 }

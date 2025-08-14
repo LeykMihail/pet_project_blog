@@ -16,6 +16,10 @@ type UserRepository interface {
 	CreateUser(ctx context.Context, user *models.User) error
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
 	GetUserByID(ctx context.Context, id int) (*models.User, error)
+
+	CreateSubscription(ctx context.Context, userID, authorID int) error
+    GetSubscriptionsByUserID(ctx context.Context, userID int) ([]int, error)
+    DeleteSubscription(ctx context.Context, userID, authorID int) error
 }
 
 type userRepository struct {
@@ -75,4 +79,36 @@ func (ur *userRepository) GetUserByID(ctx context.Context, id int) (*models.User
 		return nil, fmt.Errorf("%w: %v", apperrors.ErrSqlDataBase, err)
 	}
 	return &user, nil
+}
+
+func (ur *userRepository) CreateSubscription(ctx context.Context, userID, authorID int) error {
+    _, err := ur.db.ExecContext(ctx,
+        `INSERT INTO subscriptions (user_id, author_id) VALUES ($1, $2) ON CONFLICT (user_id, author_id) DO NOTHING`,
+        userID, authorID)
+    if err != nil {
+        return fmt.Errorf("%w: %v", apperrors.ErrSqlDataBase, err)
+    }
+    return nil
+}
+
+func (ur *userRepository) GetSubscriptionsByUserID(ctx context.Context, userID int) ([]int, error) {
+    var authorIDs []int
+    err := ur.db.SelectContext(ctx, &authorIDs,
+        `SELECT author_id FROM subscriptions WHERE user_id = $1`, userID)
+    if err != nil {
+        return nil, fmt.Errorf("%w: %v", apperrors.ErrSqlDataBase, err)
+    }
+    return authorIDs, nil
+}
+
+func (ur *userRepository) DeleteSubscription(ctx context.Context, userID, authorID int) error {
+    result, err := ur.db.ExecContext(ctx,
+        `DELETE FROM subscriptions WHERE user_id = $1 AND author_id = $2`, userID, authorID)
+    if err != nil {
+        return fmt.Errorf("%w: %v", apperrors.ErrSqlDataBase, err)
+    }
+    if rows, _ := result.RowsAffected(); rows == 0 {
+        return apperrors.ErrSqlNoFoundRows
+    }
+    return nil
 }

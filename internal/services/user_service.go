@@ -19,6 +19,10 @@ type UserService interface {
 	Register(ctx context.Context, email, password string) (*models.User, error)
 	Login(ctx context.Context, email, password string, cfg *config.Config) (*models.User, string, error)
 	GetUserByID(ctx context.Context, id int) (*models.User, error)
+	
+	CreateSubscription(ctx context.Context, userID, authorID int) error
+	GetSubscriptionsByUserID(ctx context.Context, userID int) ([]int, error)
+	DeleteSubscription(ctx context.Context, userID, authorID int) error
 }
 
 // userService реализует интерфейс UserService
@@ -144,4 +148,70 @@ func (us *userService) GetUserByID(ctx context.Context, id int) (*models.User, e
 
 	us.logger.Info("Get user by ID successfully", zap.Int("id", user.ID), zap.String("email", user.Email))
 	return user, nil
+}
+
+func (us *userService) CreateSubscription(ctx context.Context, userID, authorID int) error {
+    us.logger.Info("Start creating subscription", zap.Int("user_id", userID), zap.Int("author_id", authorID))
+    if err := validateID(us.logger, userID); err != nil {
+        return err
+    }
+    if err := validateID(us.logger, authorID); err != nil {
+        return err
+    }
+    if userID == authorID {
+        return apperrors.ErrSelfSubscription
+    }
+
+    _, err := us.userRepo.GetUserByID(ctx, authorID)
+	if err != nil {
+        if err == apperrors.ErrSqlNoFoundRows {
+			us.logger.Warn("Author not found in database", zap.Int("id", authorID))
+            return apperrors.ErrNotFoundUser
+        }
+        us.logger.Error("Failed to fetch author", zap.Error(err))
+        return apperrors.ErrDataBase
+	}
+
+    if err = us.userRepo.CreateSubscription(ctx, userID, authorID); err != nil {
+        us.logger.Error("Failed to create subscription", zap.Error(err))
+        return apperrors.ErrDataBase
+    }
+    us.logger.Info("Subscription created successfully", zap.Int("user_id", userID), zap.Int("author_id", authorID))
+    return nil
+}
+
+func (us *userService) GetSubscriptionsByUserID(ctx context.Context, userID int) ([]int, error) {
+    us.logger.Info("Start fetching subscriptions", zap.Int("user_id", userID))
+    if err := validateID(us.logger, userID); err != nil {
+        return nil, err
+    }
+    authorIDs, err := us.userRepo.GetSubscriptionsByUserID(ctx, userID)
+    if err != nil {
+        us.logger.Error("Failed to fetch subscriptions", zap.Error(err))
+        return nil, apperrors.ErrDataBase
+    }
+    us.logger.Info("Fetched subscriptions successfully", zap.Int("count", len(authorIDs)))
+    return authorIDs, nil
+}
+
+func (us *userService) DeleteSubscription(ctx context.Context, userID, authorID int) error {
+    us.logger.Info("Start deleting subscription", zap.Int("user_id", userID), zap.Int("author_id", authorID))
+    if err := validateID(us.logger, userID); err != nil {
+        return err
+    }
+    if err := validateID(us.logger, authorID); err != nil {
+        return err
+    }
+
+    err := us.userRepo.DeleteSubscription(ctx, userID, authorID)
+    if err != nil {
+        if err == apperrors.ErrSqlNoFoundRows {
+			us.logger.Warn("Subscription not found in database", zap.Int("user_id", userID), zap.Int("author_id", authorID))
+            return apperrors.ErrNotFoundSubscription
+        }
+        us.logger.Error("Failed to delete subscription", zap.Error(err))
+        return apperrors.ErrDataBase
+    }
+    us.logger.Info("Subscription deleted successfully", zap.Int("user_id", userID), zap.Int("author_id", authorID))
+    return nil
 }
